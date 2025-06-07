@@ -1,4 +1,4 @@
-library(PowdR)
+library(powdR)
 library(tidyverse)
 
 
@@ -74,19 +74,14 @@ procesar_batch_xy <- function() {
   usar_bkg <- tolower(readline("¿Deseas sustraer el fondo? (s/n): ")) == "s"
   
   # 4. ¿Usar alineamiento con cuarzo?
-  usar_alineacion <- tolower(readline("¿Deseas alinear con un patrón de cuarzo? (s/n): ")) == "s"
-  if (usar_alineacion) {
-    ruta_quartz <- readline("🪨 Ingresa la ruta del archivo .xy del cuarzo: ")
-    quartz <- read_clean_xy(ruta_quartz)
-  } else {
-    quartz <- NULL
-  }
+  usar_alineacion <- tolower(readline("¿Deseas alinear en X con respecto a cuarzo? (s/n): ")) == "s"
   
   # 5. Rango de recorte
-  xmin <- as.numeric(readline("📏 Valor mínimo de tth (ej. 10): "))
-  xmax <- as.numeric(readline("📏 Valor máximo de tth (ej. 60): "))
-  paso <- as.numeric(readline("📐 Paso entre puntos (ej. 0.02): "))
-  grid_tth <- seq(xmin, xmax, by = paso)
+  recorte <- tolower(readline("¿Deseas recortar en el eje X? (s/n): ")) == "s"
+  if (recorte) {
+    xmin <- as.numeric(readline("📏 Valor mínimo de tth (ej. 1): "))
+    xmax <- as.numeric(readline("📏 Valor máximo de tth (ej. 40): "))
+  }
   
   # 6. Listar archivos
   archivos_xy <- list.files(carpeta_entrada, pattern = "\\.xy$", full.names = TRUE)
@@ -105,16 +100,15 @@ procesar_batch_xy <- function() {
       # Leer archivo y alinear si se desea
       xy_file <- safe_read_xy(archivo_entrada)
       if (usar_alineacion) {
-        xy_file <- align_xy(xy_file, std = quartz, xmin = xmin, xmax = xmax, xshift = 0.2)
+        xy_file <- align_xy(xy_file, std = quartz, xmin = 10, xmax = xmax, xshift = 0.2)
       }
       
       # Sustraer background si aplica
       if (usar_bkg) {
         xy_file_bkg <- bkg(xy_file)
-        xy_file_bkg_sub <- data.frame(
-          tth = xy_file_bkg$tth,
-          counts = xy_file_bkg$counts - xy_file_bkg$background
-        )
+        xy_file_bkg_sub <- xy_file_bkg %>% 
+          data.frame("tth" = tth,"counts" = counts - background) %>% 
+          as_xy()
       } else {
         xy_file_bkg_sub <- data.frame(tth = xy_file$tth, counts = xy_file$counts)
       }
@@ -128,10 +122,12 @@ procesar_batch_xy <- function() {
       }
       
       # Recorte e interpolación
-      xy_interp <- approx(x = xy_file_bkg_sub$tth,
-                          y = xy_file_bkg_sub$counts,
-                          xout = grid_tth)
-      xy_final <- data.frame(tth = xy_interp$x, counts = xy_interp$y)
+      if (recorte){
+      xy_file_bkg_sub_rec <- xy_file_bkg_sub[xy_file_bkg_sub$tth >= xmin & xy_file_bkg_sub$tth <= xmax, ]
+      } else {
+        cat(paste("El archivo no se recortó en x, sus valores en tth van de: ", 
+                  min(xy_file_bkg_sub$tth), "a: ", max(xy_file_bkg_sub$tth)))
+      }
       
       # Guardar archivo
       nombre_base <- tools::file_path_sans_ext(basename(archivo_entrada))
@@ -145,6 +141,8 @@ procesar_batch_xy <- function() {
                   quote = FALSE,
                   append = TRUE)
       
+      
+      cat(paste("Archivo procesado y guardado como:", basename(archivo_salida), "\n\n"))
       cat("✅ Archivo procesado exitosamente.\n\n")
       
     }, error = function(e) {
