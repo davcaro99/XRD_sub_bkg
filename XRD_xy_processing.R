@@ -1,6 +1,7 @@
 library(powdR)
 library(tidyverse)
-
+library(dplyr)
+library(reshape2)
 
 #---Función de lectura de xy
 #La función toma los archivos que no funcionan y los limpia
@@ -57,9 +58,19 @@ safe_read_xy <- function(archivo_entrada) {
 data(minerals)
 quartz <- data.frame(tth = minerals$tth, counts = minerals$xrd$QUA.1)
 
-#--- función principal 
+#--- Función para crear el archivo matriz
 
-procesar_batch_xy <- function() {
+xy_matriz_csv <- function(sub_bkg_dir){
+  sub_bkg_files <- dir(sub_bkg_dir, pattern = "\\.xy$", full.names = TRUE)
+  
+  multi_data <- read_xy(sub_bkg_files,header = TRUE)
+  # Strip each data.frame to only tth and counts
+  cleaned_data <- lapply(multi_data, function(df) df[, c("tth", "counts")])
+}
+
+#--- Función principal 
+
+procesar_batch_xy <- function(){
   cat("=== Procesamiento interactivo de archivos .xy ===\n\n")
   
   # 1. Pedir carpeta de entrada
@@ -71,7 +82,7 @@ procesar_batch_xy <- function() {
   if (!dir.exists(carpeta_salida)) dir.create(carpeta_salida, recursive = TRUE)
   
   # 3. ¿Usar sustracción de fondo?
-  usar_bkg <- tolower(readline("¿Deseas sustraer el fondo? (s/n): ")) == "s"
+  usar_bkg <- tolower(readline("¿Deseas sustraer el background? (s/n): ")) == "s"
   
   # 4. ¿Usar alineamiento con cuarzo?
   usar_alineacion <- tolower(readline("¿Deseas alinear en X con respecto a cuarzo? (s/n): ")) == "s"
@@ -100,17 +111,21 @@ procesar_batch_xy <- function() {
       # Leer archivo y alinear si se desea
       xy_file <- safe_read_xy(archivo_entrada)
       if (usar_alineacion) {
-        xy_file <- align_xy(xy_file, std = quartz, xmin = 10, xmax = xmax, xshift = 0.2)
+        if (max(xy_file_bkg_sub$tth) > 60) {
+          xmax_align <- 60
+        } else {
+          xmax_align <- max(xy_file_bkg_sub$tth)
+        }
+        xy_file <- align_xy(xy_file, std = quartz, xmin = 10, xmax = xmax_align, xshift = 0.2)
       }
       
       # Sustraer background si aplica
       if (usar_bkg) {
         xy_file_bkg <- bkg(xy_file)
-        xy_file_bkg_sub <- xy_file_bkg %>% 
-          data.frame("tth" = tth,"counts" = counts - background) %>% 
-          as_xy()
+        xy_file_bkg_sub_raw <- data.frame("tth" = xy_file_bkg$tth, "counts" = xy_file_bkg$counts - xy_file_bkg$background)
+        xy_file_bkg_sub <- as_xy(xy_file_bkg_sub_raw)
       } else {
-        xy_file_bkg_sub <- data.frame(tth = xy_file$tth, counts = xy_file$counts)
+        xy_file_bkg_sub <- as_xy(data.frame("tth" = xy_file$tth, "counts" = xy_file$counts))
       }
       
       # Corregir valores negativos
@@ -123,10 +138,11 @@ procesar_batch_xy <- function() {
       
       # Recorte e interpolación
       if (recorte){
-      xy_file_bkg_sub_rec <- xy_file_bkg_sub[xy_file_bkg_sub$tth >= xmin & xy_file_bkg_sub$tth <= xmax, ]
+        xy_final <- xy_file_bkg_sub[xy_file_bkg_sub$tth >= xmin & xy_file_bkg_sub$tth <= xmax, ]
       } else {
         cat(paste("El archivo no se recortó en x, sus valores en tth van de: ", 
                   min(xy_file_bkg_sub$tth), "a: ", max(xy_file_bkg_sub$tth)))
+        xy_final <- xy_file_bkg_sub
       }
       
       # Guardar archivo
