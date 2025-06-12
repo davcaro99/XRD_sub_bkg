@@ -33,10 +33,10 @@ Ejecuta la función principal en R:
 procesar_batch_xy()
 ```
 
-## Version
+## Versión
 - **v1.0**
 
-## Author
+## Autor
 - **David Caro**  
 - 📧 [decaroc@unal.edu.co](mailto:decaroc@unal.edu.co)
 
