@@ -31,6 +31,7 @@ Ejecuta la función principal en R:
 
 ```r
 procesar_batch_xy()
+```
 
 ## Version
 - **v1.0**
