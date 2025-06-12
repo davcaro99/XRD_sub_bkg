@@ -1,6 +1,6 @@
 
-devtools::install_github('benmbutler/powdR')
-install.packages(c("tidyverse","reshape2"), )
+#devtools::install_github('benmbutler/powdR')
+#install.packages(c("tidyverse","reshape2"), )
 
 library(powdR)
 library(tidyverse)
@@ -64,7 +64,7 @@ quartz <- data.frame(tth = minerals$tth, counts = minerals$xrd$QUA.1)
 
 #--- Función para crear el archivo matriz
 
-<<<<<<< HEAD
+
 xy_matriz_csv <- function(sub_bkg_dir){
   sub_bkg_files <- dir(sub_bkg_dir, pattern = "\\.xy$", full.names = TRUE)
   
@@ -75,8 +75,6 @@ xy_matriz_csv <- function(sub_bkg_dir){
 
 #--- Función principal 
 
-=======
->>>>>>> 4bbfad31c6d99073c983dae9f0a7b01734d264f5
 procesar_batch_xy <- function(){
   cat("=== Procesamiento interactivo de archivos .xy ===\n\n")
   
@@ -118,7 +116,7 @@ procesar_batch_xy <- function(){
       # Leer archivo y alinear si se desea
       xy_file <- safe_read_xy(archivo_entrada)
       if (usar_alineacion) {
-        if (max(xy_file_bkg_sub$tth) > 60) {
+        if (max(xy_file$tth) > 60) {
           xmax_align <- 60
         } else {
           xmax_align <- max(xy_file_bkg_sub$tth)
@@ -131,9 +129,11 @@ procesar_batch_xy <- function(){
         xy_file_bkg <- bkg(xy_file)
         xy_file_bkg_sub_raw <- data.frame("tth" = xy_file_bkg$tth, "counts" = xy_file_bkg$counts - xy_file_bkg$background)
         xy_file_bkg_sub <- as_xy(xy_file_bkg_sub_raw)
+        cat("Background sustraido con exito.\n")
       } else {
         xy_file_bkg_sub <- as_xy(data.frame("tth" = xy_file$tth, "counts" = xy_file$counts))
       }
+      
       
       # Corregir valores negativos
       min_intensidad <- min(xy_file_bkg_sub$counts)

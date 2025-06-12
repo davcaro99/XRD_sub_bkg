@@ -31,9 +31,15 @@ El programa permite realizar los siguientes pasos en lote sobre todos los archiv
 
 Descarga el archivo `XRD_xy_processing.R` y ejecutalo, luego ejecuta la función principal en R:
 
+
 ```r
 procesar_batch_xy()
 ```
+> [!WARNING]
+> En caso de no tener instaladas las siguientes librerias, las debes instalar usando:
+> `devtools::install_github('benmbutler/powdR')`
+> `install.packages(c("tidyverse","reshape2"), )`
+
 
 ## Versión
 - **v1.0**
