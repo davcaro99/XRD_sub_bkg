@@ -148,7 +148,7 @@ procesar_batch_xy <- function(){
         xy_final <- xy_file_bkg_sub[xy_file_bkg_sub$tth >= xmin & xy_file_bkg_sub$tth <= xmax, ]
       } else {
         cat(paste("El archivo no se recortó en x, sus valores en tth van de: ", 
-                  min(xy_file_bkg_sub$tth), "a: ", max(xy_file_bkg_sub$tth)))
+                  min(xy_file_bkg_sub$tth), "a: ", max(xy_file_bkg_sub$tth) "\n"))
         xy_final <- xy_file_bkg_sub
       }
       
