@@ -1,3 +1,5 @@
+devtools::install_github('benmbutler/powdR')
+install.packages(c("tidyverse","reshape2"), )
 library(powdR)
 library(tidyverse)
 library(dplyr)
@@ -60,6 +62,7 @@ quartz <- data.frame(tth = minerals$tth, counts = minerals$xrd$QUA.1)
 
 #--- Función para crear el archivo matriz
 
+<<<<<<< HEAD
 xy_matriz_csv <- function(sub_bkg_dir){
   sub_bkg_files <- dir(sub_bkg_dir, pattern = "\\.xy$", full.names = TRUE)
   
@@ -70,6 +73,8 @@ xy_matriz_csv <- function(sub_bkg_dir){
 
 #--- Función principal 
 
+=======
+>>>>>>> 4bbfad31c6d99073c983dae9f0a7b01734d264f5
 procesar_batch_xy <- function(){
   cat("=== Procesamiento interactivo de archivos .xy ===\n\n")
   
