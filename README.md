@@ -28,6 +28,7 @@ El programa permite realizar los siguientes pasos en lote sobre todos los archiv
 ---
 
 ## 💻 Uso
+
 Descarga el archivo `XRD_xy_processing.R` y ejecutalo, luego ejecuta la función principal en R:
 
 ```r
