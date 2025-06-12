@@ -3,6 +3,8 @@
 # Aplicación de Procesamiento de Archivos `.xy` para Difracción de Rayos X
 
 Esta aplicación en R permite procesar múltiples archivos `.xy` de difracción de rayos X de forma interactiva, mediante una interfaz por consola paso a paso. Fue diseñada para facilitar el preprocesamiento de datos antes de análisis con paquetes como `PowdR`.
+# Uso:
+Descargar el archivo `XRD_xy_processing.R` y ejecutarlo.
 
 ## 🚀 Funcionalidades
 
