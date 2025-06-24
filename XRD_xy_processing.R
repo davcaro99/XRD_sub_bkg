@@ -62,16 +62,88 @@ safe_read_xy <- function(archivo_entrada) {
 data(minerals)
 quartz <- data.frame(tth = minerals$tth, counts = minerals$xrd$QUA.1)
 
+#---Función de Ayuda: ordenar_archivos_por_numero
+# Esta función ordena las rutas de archivo numéricamente, extrayendo el primer número.
+ordenar_archivos_por_numero <- function(lista_rutas_archivos) {
+  nombres_base <- basename(lista_rutas_archivos)
+  # Extrae el primer conjunto de dígitos del nombre del archivo (ej., "1" de "1.xy", "10" de "10_C.xy")
+  numeros <- as.numeric(gsub("^.*?([0-9]+).*$", "\\1", nombres_base))
+  return(lista_rutas_archivos[order(numeros)])
+}
+
 #--- Función para crear el archivo matriz
 
-
-xy_matriz_csv <- function(sub_bkg_dir){
-  sub_bkg_files <- dir(sub_bkg_dir, pattern = "\\.xy$", full.names = TRUE)
+matriz_xrd_data <- function(input_folder_path, output_folder_path) {
   
-  multi_data <- read_xy(sub_bkg_files,header = TRUE)
-  # Strip each data.frame to only tth and counts
+  message(paste("Iniciando procesamiento de archivos desde:", input_folder_path))
+  
+  # --- Carga y Ordenamiento de Archivos ---
+  # Obtiene la lista de todos los archivos .xy en la carpeta de entrada
+  sub_bkg_files <- list.files(input_folder_path, pattern = "\\.xy$", full.names = TRUE)
+  
+  if (length(sub_bkg_files) == 0) {
+    stop(paste("No se encontraron archivos .xy en la carpeta:", input_folder_path))
+  }
+  
+  # Ordena los archivos numéricamente para asegurar un orden consistente de las muestras
+  archivos_ordenados <- ordenar_archivos_por_numero(sub_bkg_files)
+  
+  # Carga los archivos .xy usando 'read_xy'.
+  multi_data_raw <- read_xy(archivos_ordenados, header = TRUE)
+  
+  # --- Limpieza y Estandarización de DataFrames Individuales ---
+  # Procesa cada dataframe: selecciona 'tth' y 'counts', y maneja problemas de encabezado/no-numéricos.
   cleaned_data <- lapply(multi_data, function(df) df[, c("tth", "counts")])
+
+  # --- Construcción de la Matriz Final ---
+  # La matriz tendrá: Filas = Muestras, Columnas = Valores tth, Contenido = Counts.
+  
+  # Paso 1: Extraer los valores de 'tth' comunes.
+  # Como todos los 'tth' son idénticos y de la misma longitud, tomamos el del primer dataframe.
+  tth_values <- cleaned_data[[1]]$tth
+  
+  # Paso 2: Crear una lista conteniendo solo los vectores de 'counts' de cada dataframe.
+  counts_vectors_list <- lapply(cleaned_data, function(df) df$counts)
+  
+  # Paso 3: Obtener los nombres de las muestras.
+  # Se basan en los nombres de archivo ordenados (ej., "1", "2", "1_C", "10").
+  sample_names <- gsub("\\.xy$", "", basename(archivos_ordenados))
+  
+  # Paso 4: Combinar los vectores de 'counts' en una matriz.
+  # 'do.call(rbind, ...)' apilará cada vector de counts como una fila.
+  final_counts_matrix <- do.call(rbind, counts_vectors_list)
+  
+  # Paso 5: Asignar nombres a las filas y columnas de la matriz.
+  # Las filas representarán las muestras.
+  rownames(final_counts_matrix) <- sample_names 
+  # Las columnas representarán los valores de tth.
+  colnames(final_counts_matrix) <- tth_values   
+  
+  message("\n--- Matriz Final Creada (Muestras en Filas, tth en Columnas) ---")
+  message(paste("Dimensiones de la matriz final:", nrow(final_counts_matrix), "filas (muestras) x", ncol(final_counts_matrix), "columnas (tth)"))
+  
+  # --- Conversión a Dataframe y Guardado a CSV ---
+  # Imprime las primeras 5 filas y 5 columnas de la matriz para verificar
+  counts_df_final <- as.data.frame(final_counts_matrix)
+  
+  message("\n--- Vista previa del Dataframe Final (primeras 5 columnas) ---")
+  print(head(counts_df_final[, 1:min(5, ncol(counts_df_final))]))
+  
+  # Construye la ruta completa para el archivo de salida.
+  output_file_path <- file.path(output_folder_path, "matriz_muestras.csv")
+  
+  # Asegura que la carpeta de salida exista. Si no, la crea.
+  if (!dir.exists(output_folder_path)) {
+    dir.create(output_folder_path, recursive = TRUE)
+    message(paste("Carpeta de salida creada:", output_folder_path))
+  }
+  
+  # Guarda el dataframe final como un archivo CSV.
+  write.csv(counts_df_final, output_file_path)
+  
+  message(paste("\nArchivo CSV guardado exitosamente en:", output_file_path))
 }
+
 
 #--- Función principal 
 
@@ -116,6 +188,7 @@ procesar_batch_xy <- function(){
       # Leer archivo y alinear si se desea
       xy_file <- safe_read_xy(archivo_entrada)
       if (usar_alineacion) {
+        cat("Alineado respecto al Cuarzo.\n")
         if (max(xy_file$tth) > 60) {
           xmax_align <- 60
         } else {
@@ -148,7 +221,7 @@ procesar_batch_xy <- function(){
         xy_final <- xy_file_bkg_sub[xy_file_bkg_sub$tth >= xmin & xy_file_bkg_sub$tth <= xmax, ]
       } else {
         cat(paste("El archivo no se recortó en x, sus valores en tth van de: ", 
-                  min(xy_file_bkg_sub$tth), "a: ", max(xy_file_bkg_sub$tth) "\n"))
+                  min(xy_file_bkg_sub$tth), "a: ", max(xy_file_bkg_sub$tth), "\n"))
         xy_final <- xy_file_bkg_sub
       }
       
@@ -172,6 +245,10 @@ procesar_batch_xy <- function(){
       cat("❌ Error al procesar:", basename(archivo_entrada), "\n")
       cat("   Detalles:", e$message, "\n\n")
     })
+  }
+  
+  if(recorte){
+    matriz_xrd_data(carpeta_entrada, carpeta_salida)
   }
   
   cat("✅ Proceso finalizado.\n")
